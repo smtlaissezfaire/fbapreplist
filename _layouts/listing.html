@@ -1,0 +1,52 @@
+---
+layout: default
+---
+<div class="wrap page">
+  {% include breadcrumbs.html %}
+  <header class="page-head">
+    <h1>{{ page.h1 | escape }}</h1>
+    {% if page.lede %}
+      <p class="lede">{{ page.lede | escape }}</p>
+    {% endif %}
+    {% if page.note %}
+      <p class="basis">{{ page.note | escape }}</p>
+    {% endif %}
+  </header>
+
+  {% if page.kind == "tax" %}
+    <div class="note-block">
+      <p>Delaware, Montana, New Hampshire, and Oregon do not levy a general statewide sales tax. Alaska does not either, though local governments there often do. A prep center in one of these states does not, by itself, decide a seller's sales-tax bill. Inventory location, nexus, and marketplace rules can still create obligations. This page is general information, not tax advice.</p>
+    </div>
+    {% for group in page.groups %}
+      <section class="group">
+        <h2><a href="{{ group.url }}">{{ group.name | escape }}</a> <span class="count">{{ group.count }}</span></h2>
+        <ul class="cards">
+          {% for c in group.centers %}
+            {% include card.html c=c level="h3" %}
+          {% endfor %}
+        </ul>
+      </section>
+    {% endfor %}
+  {% elsif page.kind == "states" %}
+    <ul class="state-grid">
+      {% for state in page.states %}
+        <li><a href="{{ state.url }}"><span>{{ state.name | escape }}</span><span class="count">{{ state.count }}</span></a></li>
+      {% endfor %}
+    </ul>
+  {% elsif page.kind == "services-index" %}
+    <ul class="link-index">
+      {% for service in page.services %}
+        <li>
+          <a href="{{ service.url }}">{{ service.title | escape }}</a>
+          <p>{{ service.count }} centers mention {{ service.name | escape }}.</p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <ul class="cards">
+      {% for c in page.centers %}
+        {% include card.html c=c level="h2" %}
+      {% endfor %}
+    </ul>
+  {% endif %}
+</div>

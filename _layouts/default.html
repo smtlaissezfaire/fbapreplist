@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% include head.html %}
+</head>
+<body class="section-{{ page.section | default: 'page' }}">
+  <a class="skip" href="#content">Skip to content</a>
+  {% include header.html %}
+  <main id="content">
+    {{ content }}
+  </main>
+  {% include footer.html %}
+  <script src="/assets/js/site.js" defer></script>
+</body>
+</html>

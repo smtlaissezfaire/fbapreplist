@@ -1,0 +1,369 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "cgi"
+require "csv"
+require "json"
+require "pathname"
+
+ROOT = Pathname.new(__dir__).join("..").expand_path
+SITE = Pathname.new(ARGV[0] || ROOT.join("_site")).expand_path
+CSV_PATH = ROOT.join("_data/centers.csv")
+HOST = "https://fbapreplist.com"
+EXPECTED_CENTERS = 352
+EXPECTED_STATES = 37
+
+STATES = {
+  "AL" => "Alabama", "AK" => "Alaska", "AZ" => "Arizona", "AR" => "Arkansas",
+  "CA" => "California", "CO" => "Colorado", "CT" => "Connecticut", "DE" => "Delaware",
+  "DC" => "District of Columbia", "FL" => "Florida", "GA" => "Georgia", "HI" => "Hawaii",
+  "ID" => "Idaho", "IL" => "Illinois", "IN" => "Indiana", "IA" => "Iowa",
+  "KS" => "Kansas", "KY" => "Kentucky", "LA" => "Louisiana", "ME" => "Maine",
+  "MD" => "Maryland", "MA" => "Massachusetts", "MI" => "Michigan", "MN" => "Minnesota",
+  "MS" => "Mississippi", "MO" => "Missouri", "MT" => "Montana", "NE" => "Nebraska",
+  "NV" => "Nevada", "NH" => "New Hampshire", "NJ" => "New Jersey", "NM" => "New Mexico",
+  "NY" => "New York", "NC" => "North Carolina", "ND" => "North Dakota", "OH" => "Ohio",
+  "OK" => "Oklahoma", "OR" => "Oregon", "PA" => "Pennsylvania", "RI" => "Rhode Island",
+  "SC" => "South Carolina", "SD" => "South Dakota", "TN" => "Tennessee", "TX" => "Texas",
+  "UT" => "Utah", "VT" => "Vermont", "VA" => "Virginia", "WA" => "Washington",
+  "WV" => "West Virginia", "WI" => "Wisconsin", "WY" => "Wyoming"
+}.freeze
+
+SERVICES = {
+  "fba-prep" => "fba_prep",
+  "fbm-dtc-fulfillment" => "fbm_dtc_fulfillment",
+  "walmart-wfs" => "walmart_wfs",
+  "tiktok-shop" => "tiktok_shop",
+  "returns-and-removals" => "returns_removals",
+  "bundling-and-kitting" => "bundling_kitting",
+  "photography" => "photography",
+  "storage" => "storage",
+  "international-import" => "international_import",
+  "hazmat" => "hazmat"
+}.freeze
+
+BANNED = /(?<![\w])(?:N\/A|nil|NaN|undefined)(?![\w])/
+ERRORS = []
+
+def fail(message)
+  ERRORS << message
+end
+
+def slugify(text)
+  text.to_s.downcase.gsub(/[^a-z0-9]+/, "-").gsub(/\A-|-\z/, "")
+end
+
+def read(path)
+  File.read(path, encoding: "UTF-8")
+end
+
+def html_files
+  Dir[SITE.join("**/*.html")].map { |file| Pathname.new(file) }.sort
+end
+
+def rel(path)
+  path.relative_path_from(SITE).to_s
+end
+
+def public_url(path)
+  relative = rel(path)
+  return nil if relative == "404.html"
+  if relative == "index.html"
+    "#{HOST}/"
+  elsif relative.end_with?("/index.html")
+    "#{HOST}/#{relative.delete_suffix('index.html')}"
+  else
+    "#{HOST}/#{relative}"
+  end
+end
+
+def file_for(url_path)
+  path = url_path.split("#", 2).first.split("?", 2).first
+  path = "/" if path.nil? || path.empty?
+  relative = path.sub(%r{\A/}, "")
+  candidates = []
+  if relative.empty?
+    candidates << "index.html"
+  else
+    candidates << relative
+    candidates << File.join(relative, "index.html") if relative.end_with?("/")
+    candidates << "#{relative.sub(%r{/\z}, '')}/index.html"
+    candidates << "#{relative}.html" unless relative.end_with?(".html")
+  end
+  candidates.map { |item| SITE.join(item) }.find(&:file?)
+end
+
+def internal_path(href)
+  value = CGI.unescapeHTML(href.to_s).strip
+  return :skip if value.empty? || value.start_with?("#", "mailto:", "tel:", "javascript:")
+  if value.start_with?("http://", "https://")
+    return :external unless value == HOST || value.start_with?("#{HOST}/")
+    value = value.delete_prefix(HOST)
+    value = "/" if value.empty?
+  elsif value.start_with?("//")
+    return :external
+  elsif !value.start_with?("/")
+    return [:relative, value]
+  end
+  value.split("#", 2).first.split("?", 2).first
+end
+
+abort "Missing build output at #{SITE}. Run bundle exec jekyll build first." unless SITE.directory?
+abort "Missing #{CSV_PATH}" unless CSV_PATH.file?
+
+rows = CSV.read(CSV_PATH, headers: true, encoding: "bom|utf-8").map(&:to_h)
+fail "CSV has #{rows.size} rows, expected #{EXPECTED_CENTERS}" unless rows.size == EXPECTED_CENTERS
+bad_status = rows.reject { |row| row["url_status"] == "ok" }
+fail "CSV contains #{bad_status.size} rows that are not url_status=ok" unless bad_status.empty?
+
+state_codes = rows.map { |row| row["state_for_filtering"].to_s.strip }.reject(&:empty?).uniq
+fail "Expected #{EXPECTED_STATES} distinct states, CSV has #{state_codes.size}" unless state_codes.size == EXPECTED_STATES
+
+center_pages = Dir[SITE.join("prep-centers/*/index.html")].map { |file| Pathname.new(file) }
+fail "Expected #{EXPECTED_CENTERS} center pages, found #{center_pages.size}" unless center_pages.size == EXPECTED_CENTERS
+
+state_pages = Dir[SITE.join("fba-prep-centers/*/index.html")].map { |file| Pathname.new(file) }
+state_pages.reject! { |file| file.to_s.include?("sales-tax-free-states") }
+fail "State pages (#{state_pages.size}) do not match distinct states (#{state_codes.size})" unless state_pages.size == state_codes.size
+
+state_codes.each do |code|
+  name = STATES[code] || code
+  path = SITE.join("fba-prep-centers/#{slugify(name)}/index.html")
+  fail "Missing state page for #{name}" unless path.file?
+  next unless path.file?
+  cards = read(path).scan('class="card"').size
+  expected = rows.count { |row| row["state_for_filtering"] == code }
+  fail "#{name} page lists #{cards} centers, CSV has #{expected}" unless cards == expected
+end
+
+fail "Missing state index" unless SITE.join("fba-prep-centers/index.html").file?
+fail "Missing services index" unless SITE.join("services/index.html").file?
+
+service_pages = []
+SERVICES.each do |slug, column|
+  expected = rows.count { |row| row[column] == "Y" }
+  path = SITE.join("services/#{slug}/index.html")
+  if expected >= 5
+    service_pages << path
+    fail "Missing service page #{slug} (#{expected} centers)" unless path.file?
+    if path.file?
+      cards = read(path).scan('class="card"').size
+      fail "#{slug} lists #{cards} centers, CSV has #{expected}" unless cards == expected
+    end
+  elsif path.file?
+    fail "Thin service page exists for #{slug} (#{expected} < 5)"
+  end
+end
+
+tax_rows = rows.select { |row| row["sales_tax_free_state"] == "Y" }
+tax_path = SITE.join("fba-prep-centers/sales-tax-free-states/index.html")
+fail "Missing sales-tax-free states page" unless tax_path.file?
+if tax_path.file?
+  cards = read(tax_path).scan('class="card"').size
+  fail "Tax-free page lists #{cards} centers, CSV has #{tax_rows.size}" unless cards == tax_rows.size
+end
+
+cname = SITE.join("CNAME")
+fail "CNAME missing from build output" unless cname.file? && cname.read.strip == "fbapreplist.com"
+robots = SITE.join("robots.txt")
+fail "robots.txt missing" unless robots.file?
+if robots.file?
+  robots_body = read(robots)
+  fail "robots.txt does not allow all" unless robots_body.include?("Allow: /")
+  fail "robots.txt missing sitemap" unless robots_body.include?("Sitemap: #{HOST}/sitemap.xml")
+end
+fail "favicon missing" unless SITE.join("favicon.svg").file?
+fail "stylesheet missing" unless SITE.join("assets/css/site.css").file?
+fail "search script missing" unless SITE.join("assets/js/site.js").file?
+fail "Open Graph image missing" unless SITE.join("assets/og.png").file?
+
+index_path = SITE.join("search-index.json")
+fail "search-index.json missing" unless index_path.file?
+if index_path.file?
+  index = JSON.parse(read(index_path))
+  centers = index.fetch("centers")
+  fail "Search index has #{centers.size} centers, expected #{EXPECTED_CENTERS}" unless centers.size == EXPECTED_CENTERS
+  urls = centers.map { |center| center["url"] }
+  fail "Search index has duplicate URLs" unless urls.uniq.size == urls.size
+  {
+    "Fulfyld" => "/prep-centers/fulfyld/",
+    "A&M Prep Services" => "/prep-centers/a-m-prep-services/",
+    "That's A Wrap" => "/prep-centers/that-s-a-wrap/",
+    "3PL Dallas TX (FBA Prep & Fulfillment)" => "/prep-centers/3pl-dallas-tx-fba-prep-fulfillment/",
+    "Ecom Prep'n Pack" => "/prep-centers/ecom-prep-n-pack/"
+  }.each do |name, url|
+    found = centers.find { |center| center["name"] == name }
+    fail "Search index missing #{name}" unless found
+    fail "#{name} slug is #{found && found['url']}, expected #{url}" unless found && found["url"] == url
+  end
+  centers.each do |center|
+    fail "Search index URL missing on disk: #{center['url']}" unless file_for(center["url"])
+  end
+end
+
+sitemap_path = SITE.join("sitemap.xml")
+fail "sitemap.xml missing" unless sitemap_path.file?
+pages = html_files
+indexable = pages.filter_map { |file| public_url(file) }
+if sitemap_path.file?
+  locs = read(sitemap_path).scan(%r{<loc>(.*?)</loc>}).flatten
+  fail "Sitemap has duplicate URLs" unless locs.uniq.size == locs.size
+  missing = indexable - locs
+  extra = locs - indexable
+  fail "Sitemap missing #{missing.size} indexable URLs, including #{missing.first(5).join(', ')}" unless missing.empty?
+  fail "Sitemap lists #{extra.size} unknown URLs, including #{extra.first(5).join(', ')}" unless extra.empty?
+  locs.each do |loc|
+    path = loc.delete_prefix(HOST)
+    fail "Sitemap URL has no file: #{loc}" unless file_for(path)
+  end
+  fail "Sitemap includes 404" if locs.any? { |loc| loc.include?("404") }
+end
+
+titles = {}
+descriptions = {}
+link_count = 0
+pages.each do |file|
+  body = read(file)
+  relative = rel(file)
+  raw_title = body[/<title>(.*?)<\/title>/m, 1]
+  title = CGI.unescapeHTML(raw_title.to_s).strip
+  fail "Empty title in #{relative}" if title.empty?
+  (titles[title] ||= []) << relative
+
+  raw_desc = body[/<meta name="description" content="([^"]*)"/, 1]
+  description = CGI.unescapeHTML(raw_desc.to_s).strip
+  fail "Empty meta description in #{relative}" if description.empty?
+  (descriptions[description] ||= []) << relative
+
+  fail "Missing canonical in #{relative}" unless body.include?('rel="canonical"')
+  fail "More or fewer than one h1 in #{relative}" unless body.scan(/<h1[\s>]/).size == 1
+  fail "Banned literal in #{relative}" if body.match?(BANNED)
+  fail "Unrendered Liquid in #{relative}" if body.include?("{{") || body.include?("{%")
+
+  body.scan(%r{<script type="application/ld\+json">(.*?)</script>}m) do |block|
+    parsed = JSON.parse(block[0])
+    walker = lambda do |node|
+      case node
+      when Hash
+        node.each_value { |value| walker.call(value) }
+      when Array
+        node.each { |value| walker.call(value) }
+      when String
+        fail "Empty string in JSON-LD at #{relative}" if node.strip.empty?
+      end
+    end
+    walker.call(parsed)
+  rescue JSON::ParserError => e
+    fail "Invalid JSON-LD in #{relative}: #{e.message}"
+  end
+
+  if relative == "index.html"
+    fail "Home missing SearchAction" unless body.include?("SearchAction")
+  elsif !body.include?("BreadcrumbList")
+    fail "Missing BreadcrumbList in #{relative}"
+  end
+  fail "Center page missing LocalBusiness: #{relative}" if relative.start_with?("prep-centers/") && !body.include?('"@type":"LocalBusiness"')
+  if relative.start_with?("fba-prep-centers/") && relative != "fba-prep-centers/index.html" && !relative.end_with?("sales-tax-free-states/index.html")
+    fail "State page missing ItemList: #{relative}" unless body.include?('"@type":"ItemList"')
+  end
+  if relative.start_with?("services/") && relative != "services/index.html"
+    fail "Service page missing ItemList: #{relative}" unless body.include?('"@type":"ItemList"')
+  end
+
+  body.scan(/<a\b[^>]*>/i).each do |tag|
+    href = tag[/href="([^"]*)"/, 1]
+    next if href.nil?
+    link_count += 1
+    target = internal_path(href)
+    if target.is_a?(Array) && target[0] == :relative
+      fail "Relative link in #{relative}: #{href}"
+      next
+    end
+    next if target == :skip || target == :external
+    fail "Broken internal link in #{relative}: #{href}" unless file_for(target)
+    if href.start_with?("http://", "https://") && !href.start_with?(HOST)
+      fail "Outbound link missing nofollow/noopener in #{relative}: #{href}" unless tag.include?("nofollow") && tag.include?("noopener")
+    end
+  end
+  body.scan(/<(?:link|script|img)\b[^>]*>/i).each do |tag|
+    src = tag[/(?:href|src)="([^"]*)"/, 1]
+    next if src.nil?
+    target = internal_path(src)
+    next if target == :skip || target == :external || target.is_a?(Array)
+    fail "Broken asset in #{relative}: #{src}" unless file_for(target)
+  end
+end
+
+titles.each { |title, files| fail "Duplicate title #{title.inspect} on #{files.join(', ')}" if files.size > 1 }
+descriptions.each { |description, files| fail "Duplicate description on #{files.join(', ')}" if files.size > 1 }
+
+text_files = Dir[SITE.join("**/*.{html,js,css,xml,json,txt,svg}")].map { |file| Pathname.new(file) }
+text_files.each do |file|
+  body = read(file)
+  fail "Banned literal in #{rel(file)}" if body.match?(BANNED)
+end
+
+rows.each do |row|
+  next unless row["state_basis"] == "directory listing"
+  name = row["name"]
+  base = slugify(name)
+  path = SITE.join("prep-centers/#{base}/index.html")
+  next unless path.file?
+  body = CGI.unescapeHTML(read(path))
+  fail "#{name} is a third-party state but the page does not say so" unless body.include?("third-party")
+end
+
+sample = rows.find { |row| !row["unit_pricing_excerpt"].to_s.strip.empty? }
+if sample
+  fragment = sample["unit_pricing_excerpt"].split(" ; ").first.strip
+  page = SITE.join("prep-centers/#{slugify(sample['name'])}/index.html")
+  if page.file?
+    body = CGI.unescapeHTML(read(page)).gsub("&#39;", "'")
+    fail "Pricing excerpt missing for #{sample['name']}" unless body.include?(fragment)
+  else
+    fail "Could not find page for excerpt sample #{sample['name']}"
+  end
+end
+
+list_page = SITE.join("list-your-prep-center/index.html")
+fail "Listing form page missing" unless list_page.file?
+if list_page.file?
+  form = read(list_page)
+  fail "Formspree placeholder missing from the listing page" unless form.include?("https://formspree.io/f/REPLACE_ME")
+  fail "Honeypot missing" unless form.include?('name="_gotcha"')
+  fail "Listing form warning missing" unless form.include?("not live yet")
+end
+
+home = read(SITE.join("index.html"))
+fail "Home is missing the center list" unless home.scan('class="card"').size == EXPECTED_CENTERS
+
+other_pages = pages.reject do |file|
+  relative = rel(file)
+  relative.start_with?("prep-centers/", "fba-prep-centers/", "services/")
+end
+other_names = other_pages.map { |file| rel(file) }
+
+puts "FBA Prep List verification"
+puts "  center pages: #{center_pages.size}"
+puts "  state pages: #{state_pages.size}"
+puts "  state index: #{SITE.join('fba-prep-centers/index.html').file? ? 1 : 0}"
+puts "  service pages: #{service_pages.count(&:file?)}"
+puts "  service index: #{SITE.join('services/index.html').file? ? 1 : 0}"
+puts "  sales-tax-free page: #{tax_path.file? ? 1 : 0}"
+puts "  other html: #{other_names.size} (#{other_names.join(', ')})"
+puts "  total html: #{pages.size}"
+puts "  sitemap urls: #{sitemap_path.file? ? read(sitemap_path).scan('<loc>').size : 0}"
+puts "  search index: #{index_path.file? ? JSON.parse(read(index_path)).fetch('centers').size : 0}"
+puts "  internal link tags checked: #{link_count}"
+puts "  tax-free centers: #{tax_rows.size}"
+
+if ERRORS.empty?
+  puts "OK"
+  exit 0
+end
+
+warn = "FAILED with #{ERRORS.size} error#{ERRORS.size == 1 ? '' : 's'}"
+puts warn
+ERRORS.first(80).each { |error| puts "  - #{error}" }
+puts "  - ... #{ERRORS.size - 80} more" if ERRORS.size > 80
+exit 1

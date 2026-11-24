@@ -1,0 +1,132 @@
+---
+layout: default
+---
+<div class="wrap page">
+  {% include breadcrumbs.html %}
+  <div class="center-grid">
+    <aside class="contact-card">
+      <h2>Contact</h2>
+      {% if page.center.website %}
+        <p class="contact-line">
+          <span>Website</span>
+          <a href="{{ page.center.website | escape }}" rel="nofollow noopener" target="_blank">{{ page.center.website_label | escape }}</a>
+        </p>
+      {% endif %}
+      {% if page.center.phones.size > 0 %}
+        <p class="contact-line">
+          <span>Phone</span>
+          {% for phone in page.center.phones %}
+            {% if phone.href %}
+              <a href="{{ phone.href | escape }}">{{ phone.text | escape }}</a>
+            {% else %}
+              {{ phone.text | escape }}
+            {% endif %}
+            {% unless forloop.last %}<br>{% endunless %}
+          {% endfor %}
+        </p>
+      {% endif %}
+      {% if page.center.emails.size > 0 %}
+        <p class="contact-line">
+          <span>Email</span>
+          {% for email in page.center.emails %}
+            <a href="{{ email.href | escape }}">{{ email.text | escape }}</a>
+            {% unless forloop.last %}<br>{% endunless %}
+          {% endfor %}
+        </p>
+      {% endif %}
+      <p class="basis">Published by the center.{% if page.center.contact_source_url %} <a href="{{ page.center.contact_source_url | escape }}" rel="nofollow noopener" target="_blank">Contact source</a>.{% endif %}</p>
+      <p><a href="{{ page.center.correction_url | escape }}">Report a correction</a></p>
+    </aside>
+
+    <article class="center-main">
+      <header class="page-head">
+        <h1>{{ page.center.name | escape }}</h1>
+        <p class="loc">{{ page.center.location_line | escape }}</p>
+        {% if page.center.basis_note %}
+          <p class="basis">{{ page.center.basis_note | escape }}</p>
+        {% endif %}
+        {% if page.center.address_source_url %}
+          <p class="basis"><a href="{{ page.center.address_source_url | escape }}" rel="nofollow noopener" target="_blank">Location source</a></p>
+        {% endif %}
+      </header>
+
+      {% if page.center.services.size > 0 or page.center.tax_free %}
+        <ul class="badges">
+          {% for service in page.center.services %}
+            <li>
+              {% if service.url %}
+                <a href="{{ service.url }}">{{ service.name | escape }}</a>
+              {% else %}
+                <span>{{ service.name | escape }}</span>
+              {% endif %}
+            </li>
+          {% endfor %}
+          {% if page.center.tax_free %}
+            <li><a href="/fba-prep-centers/sales-tax-free-states/">Sales-tax-free state</a></li>
+          {% endif %}
+        </ul>
+      {% endif %}
+
+      {% if page.center.warehouse_states.size > 0 %}
+        <section>
+          <h2>States mentioned in addresses on their website</h2>
+          <p>{{ page.center.warehouse_states | join: ", " | escape }}</p>
+        </section>
+      {% endif %}
+
+      {% if page.center.excerpts.size > 0 %}
+        <section>
+          <h2>From the center's website</h2>
+          <p class="basis">Verbatim fragments. They are not confirmed prices, minimums, or turnaround times, and they may be incomplete.</p>
+          {% for excerpt in page.center.excerpts %}
+            <blockquote class="excerpt">
+              <p>{{ excerpt.text | escape }}</p>
+              <footer>
+                {{ excerpt.label | escape }}
+                {% if excerpt.source_url %}
+                  · <a href="{{ excerpt.source_url | escape }}" rel="nofollow noopener" target="_blank">Source</a>
+                {% endif %}
+              </footer>
+            </blockquote>
+          {% endfor %}
+        </section>
+      {% endif %}
+
+      {% if page.center.software.size > 0 %}
+        <section>
+          <h2>Software mentioned</h2>
+          <ul>
+            {% for item in page.center.software %}
+              <li>{{ item | escape }}</li>
+            {% endfor %}
+          </ul>
+          <p class="basis">These names appeared on the center's website. A mention does not confirm that the center uses the product.</p>
+        </section>
+      {% endif %}
+
+      {% if page.center.sources.size > 0 %}
+        <details class="sources">
+          <summary>Sources for this listing</summary>
+          <ul>
+            {% for source in page.center.sources %}
+              <li><a href="{{ source.url | escape }}" rel="nofollow noopener" target="_blank">{{ source.label | escape }}</a></li>
+            {% endfor %}
+          </ul>
+        </details>
+      {% endif %}
+
+      <p class="basis">Public pages checked {{ page.center.checked_label | escape }}. Directory listing only, not an endorsement. Confirm the details with the center before you hire them.</p>
+
+      {% if page.center.related.size > 0 %}
+        <section>
+          <h2>Other listed centers in {{ page.center.state_name | escape }}</h2>
+          <ul class="related">
+            {% for related in page.center.related %}
+              <li><a href="{{ related.url }}">{{ related.name | escape }}</a> <span>{{ related.location_line | escape }}</span></li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endif %}
+    </article>
+  </div>
+</div>
