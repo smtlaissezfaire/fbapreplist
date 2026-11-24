@@ -329,9 +329,13 @@ list_page = SITE.join("list-your-prep-center/index.html")
 fail "Listing form page missing" unless list_page.file?
 if list_page.file?
   form = read(list_page)
-  fail "Formspree placeholder missing from the listing page" unless form.include?("https://formspree.io/f/REPLACE_ME")
+  fail "Formspree endpoint missing from the listing page" unless form.match?(%r{https://formspree\.io/f/[A-Za-z0-9_]+})
   fail "Honeypot missing" unless form.include?('name="_gotcha"')
-  fail "Listing form warning missing" unless form.include?("not live yet")
+  if form.include?("https://formspree.io/f/REPLACE_ME")
+    fail "Listing form warning missing" unless form.include?("not live yet")
+  else
+    fail "Listing form warning shown with a live endpoint" if form.include?("not live yet")
+  end
 end
 
 home = read(SITE.join("index.html"))
