@@ -6,7 +6,7 @@ lang: en
 permalink: pretty
 markdown: kramdown
 # Replace this placeholder before launch. The list-your-prep-center page warns visitors until you do.
-formspree_endpoint: "https://formspree.io/f/REPLACE_ME"
+formspree_endpoint: "https://formspree.io/f/xeagvnrb"
 kramdown:
   input: GFM
   hard_wrap: false

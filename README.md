@@ -37,7 +37,7 @@ State-by-service combination pages are not generated. The home page filters by s
 
 ## Listing form
 
-`formspree_endpoint` in `_config.yml` is the placeholder `https://formspree.io/f/REPLACE_ME`.
+`formspree_endpoint` in `_config.yml` is the live Formspree form `https://formspree.io/f/xeagvnrb`.
 
 The list-your-prep-center page shows a warning, and the build prints a warning, until that value is a real Formspree endpoint. Change it in `_config.yml` only. The form posts there and includes a `_gotcha` honeypot.
 
