@@ -1,0 +1,96 @@
+---
+layout: default
+---
+<section class="hero">
+  <div class="wrap">
+    <p class="eyebrow">US Amazon FBA prep centers</p>
+    <h1>Find a prep center for your FBA shipments</h1>
+    <p class="lede">{{ site.data.directory.center_count }} centers in {{ site.data.directory.state_count }} states, compiled from each center's own website. Public pages checked {{ site.data.directory.checked_label }}.</p>
+    <p class="hero-actions">
+      <a class="button" href="#directory">Search the directory</a>
+      <a class="button button-ghost" href="/list-your-prep-center/">List your prep center</a>
+    </p>
+  </div>
+</section>
+<div class="wrap home-stack">
+  <form id="filters" class="panel filters" role="search" action="/" method="get">
+    <div>
+      <label for="q">Search</label>
+      <input id="q" name="q" type="search" placeholder="Name, city, or state" autocomplete="off">
+    </div>
+    <div>
+      <label for="state">State</label>
+      <select id="state" name="state">
+        <option value="">All states</option>
+        {% for state in site.data.directory.states %}
+          <option value="{{ state.code }}">{{ state.name | escape }} ({{ state.count }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="service">Service</label>
+      <select id="service" name="service">
+        <option value="">All services</option>
+        {% for service in site.data.directory.services %}
+          <option value="{{ service.slug }}">{{ service.name | escape }} ({{ service.count }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="button" id="clear-filters">Clear</button>
+  </form>
+  <noscript>
+    <p class="basis">Filters use JavaScript. You can still browse <a href="/fba-prep-centers/">by state</a> or <a href="/services/">by service</a>, and the full list is below.</p>
+  </noscript>
+
+  <section class="featured" aria-labelledby="featured-heading">
+    <div class="section-head">
+      <h2 id="featured-heading">Browse by state</h2>
+      <a href="/fba-prep-centers/">All {{ site.data.directory.state_count }} states</a>
+    </div>
+    <ul class="state-grid">
+      {% for state in site.data.directory.featured_states %}
+        <li><a href="{{ state.url }}"><span>{{ state.name | escape }}</span><span class="count">{{ state.count }}</span></a></li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <aside class="callout">
+    <h2>States with no statewide sales tax</h2>
+    <p>{{ site.data.directory.tax_free_count }} listed centers are in
+      {% for state in site.data.directory.tax_free_states %}{% unless forloop.first %}{% if forloop.last %} and {% else %}, {% endif %}{% endunless %}{{ state.name | escape }}{% endfor %}.
+      These states do not levy a general statewide sales tax.{% unless site.data.directory.alaska_listed %} Alaska is flagged the same way in the dataset, and this edition has no Alaska centers.{% endunless %}
+      Local taxes and a seller's nexus can still apply. This is not tax advice.</p>
+    <p><a href="/fba-prep-centers/sales-tax-free-states/">Browse sales-tax-free states</a></p>
+  </aside>
+
+  <section class="service-row" aria-labelledby="services-heading">
+    <div class="section-head">
+      <h2 id="services-heading">Services mentioned on center websites</h2>
+      <a href="/services/">All services</a>
+    </div>
+    <ul class="badges badges-lg">
+      {% for service in site.data.directory.services %}
+        <li><a href="{{ service.url }}">{{ service.name | escape }} <span>{{ service.count }}</span></a></li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section aria-labelledby="directory-heading">
+    <div class="section-head">
+      <h2 id="directory-heading">All prep centers</h2>
+    </div>
+    <p id="result-count" aria-live="polite">{{ site.data.directory.center_count }} centers</p>
+    <p id="empty" class="empty" hidden>No centers match these filters. Clear them, or <a href="/fba-prep-centers/">browse by state</a>.</p>
+    <ul class="cards" id="directory">
+      {% for c in site.data.directory.centers %}
+        {% include card.html c=c level="h3" %}
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="cta">
+    <h2>List your prep center</h2>
+    <p>Run a US prep center and want sellers to find you, or need a listing corrected? Send the details. This first version collects requests. It does not sell placement.</p>
+    <a class="button" href="/list-your-prep-center/">Get featured</a>
+  </section>
+</div>

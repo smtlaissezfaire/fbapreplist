@@ -1,0 +1,84 @@
+---
+layout: page
+title: List your prep center
+description: Ask FBA Prep List to add your US prep center, request a feature, or report a correction. The form is a placeholder until Formspree is connected.
+permalink: /list-your-prep-center/
+section: list
+wide: true
+crumbs:
+  - label: Home
+    url: /
+  - label: List your prep center
+    url: /list-your-prep-center/
+---
+<!-- Replace formspree_endpoint in _config.yml. Current placeholder: https://formspree.io/f/REPLACE_ME -->
+{% if site.formspree_endpoint contains "REPLACE_ME" %}
+<p class="banner" role="status">This form is not live yet. The Formspree endpoint is still the placeholder in the site config. Submitting it will not deliver your message.</p>
+{% endif %}
+
+<p>Use this form to list a US prep center, ask about a featured mention, or report a correction. Featured placement on this first version is a request, not a paid slot and not a promise of ranking.</p>
+<ul>
+  <li>Sellers use the directory to find prep centers by state and by the services a center's website mentions.</li>
+  <li>If your center is already listed, send a correction and point us at the page on your site that shows the right detail.</li>
+  <li>Include a website. Listings are checked against the center's public pages.</li>
+</ul>
+
+<form class="form-grid" action="{{ site.formspree_endpoint | escape }}" method="POST" accept-charset="UTF-8">
+  <div class="hp" aria-hidden="true">
+    <!-- Honeypot. Humans should leave this field empty. -->
+    <label for="gotcha">Leave this field empty</label>
+    <input id="gotcha" type="text" name="_gotcha" tabindex="-1" autocomplete="off">
+  </div>
+
+  <div>
+    <label for="request-type">Request</label>
+    <select id="request-type" name="type" required>
+      <option value="listing">List my prep center</option>
+      <option value="featured">Get featured</option>
+      <option value="correction">Report a correction</option>
+    </select>
+  </div>
+  <div>
+    <label for="business-name">Business name</label>
+    <input id="business-name" name="business_name" type="text" required autocomplete="organization">
+  </div>
+  <div>
+    <label for="website">Website</label>
+    <input id="website" name="website" type="url" placeholder="https://" autocomplete="url">
+  </div>
+  <div>
+    <label for="contact-name">Contact name</label>
+    <input id="contact-name" name="contact_name" type="text" autocomplete="name">
+  </div>
+  <div>
+    <label for="email">Email</label>
+    <input id="email" name="email" type="email" required autocomplete="email">
+  </div>
+  <div>
+    <label for="city">City</label>
+    <input id="city" name="city" type="text" autocomplete="address-level2">
+  </div>
+  <div>
+    <label for="biz-state">State</label>
+    <select id="biz-state" name="state">
+      <option value="">Select a state</option>
+      {% for state in site.data.directory.all_states %}
+        <option value="{{ state.code }}">{{ state.name | escape }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <fieldset>
+    <legend>Services you offer</legend>
+    <div class="checks">
+      {% for service in site.data.directory.services %}
+        <label class="check"><input type="checkbox" name="services" value="{{ service.slug }}"> {{ service.name | escape }}</label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  <div>
+    <label for="message">Message</label>
+    <textarea id="message" name="message" required></textarea>
+  </div>
+  <p class="basis">Do not include customer lists, passwords, or payment information. Messages go to Formspree after the placeholder endpoint is replaced. See the <a href="/privacy/">privacy</a> note.</p>
+  <button class="button" type="submit">Send</button>
+</form>

@@ -1,0 +1,28 @@
+{% assign c = include.c %}
+<li class="card" data-url="{{ c.url }}" data-state="{{ c.state_code }}" data-services="{{ c.service_slugs }}" data-search="{{ c.search | escape }}">
+  {% if include.level == "h3" %}
+    <h3><a href="{{ c.url }}">{{ c.name | escape }}</a></h3>
+  {% else %}
+    <h2><a href="{{ c.url }}">{{ c.name | escape }}</a></h2>
+  {% endif %}
+  <p class="loc">{{ c.location_line | escape }}</p>
+  {% if c.basis_short %}
+    <p class="basis">{{ c.basis_short | escape }}</p>
+  {% endif %}
+  {% if c.services.size > 0 or c.tax_free %}
+    <ul class="badges">
+      {% for service in c.services %}
+        <li>
+          {% if service.url %}
+            <a href="{{ service.url }}">{{ service.name | escape }}</a>
+          {% else %}
+            <span>{{ service.name | escape }}</span>
+          {% endif %}
+        </li>
+      {% endfor %}
+      {% if c.tax_free %}
+        <li><a href="/fba-prep-centers/sales-tax-free-states/">Sales-tax-free state</a></li>
+      {% endif %}
+    </ul>
+  {% endif %}
+</li>
