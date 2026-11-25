@@ -1,0 +1,82 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Submit all sitemap URLs to IndexNow. Used after a successful Pages deploy.
+# Exits non-zero on failure; the workflow step should use continue-on-error.
+
+require "json"
+require "net/http"
+require "pathname"
+require "uri"
+
+ROOT = Pathname(__dir__).parent
+KEY_FILE = ROOT.glob("*.txt").find { |path| path.basename.to_s.match?(/\A[0-9a-f]{32}\.txt\z/) }
+abort "IndexNow key file not found at the repo root" unless KEY_FILE
+
+KEY = KEY_FILE.read.strip
+abort "IndexNow key file does not contain the key" unless KEY == KEY_FILE.basename(".txt").to_s
+
+config = ROOT.join("_config.yml").read
+host = config[/^url:\s*"https:\/\/([^"]+)"/, 1]
+abort "Could not read site host from _config.yml" if host.nil? || host.empty?
+
+sitemap_url = "https://#{host}/sitemap.xml"
+key_location = "https://#{host}/#{KEY_FILE.basename}"
+
+def http_get(url, attempts: 5)
+  uri = URI(url)
+  last_error = nil
+  attempts.times do |i|
+    begin
+      response = Net::HTTP.get_response(uri)
+      return response if response.is_a?(Net::HTTPSuccess)
+
+      last_error = "HTTP #{response.code}"
+      warn "GET #{url} failed (#{last_error}); retrying..."
+    rescue StandardError => e
+      last_error = e.message
+      warn "GET #{url} error (#{last_error}); retrying..."
+    end
+    sleep 10 unless i == attempts - 1
+  end
+  abort "Could not fetch #{url}: #{last_error}"
+end
+
+# Give GitHub Pages a moment, then fetch the live sitemap.
+sleep 5
+sitemap = http_get(sitemap_url).body
+urls = sitemap.scan(%r{<loc>\s*(https?://[^<\s]+)\s*</loc>}).flatten
+abort "Sitemap contained no URLs" if urls.empty?
+
+payload = {
+  "host" => host,
+  "key" => KEY,
+  "keyLocation" => key_location,
+  "urlList" => urls
+}
+
+uri = URI("https://api.indexnow.org/indexnow")
+last_response = nil
+5.times do |i|
+  http = Net::HTTP.new(uri.host, uri.port)
+  http.use_ssl = true
+  request = Net::HTTP::Post.new(uri)
+  request["Content-Type"] = "application/json; charset=utf-8"
+  request.body = JSON.generate(payload)
+  last_response = http.request(request)
+  code = last_response.code
+  puts "IndexNow responded #{code} for #{urls.size} URLs"
+  exit 0 if %w[200 202].include?(code)
+
+  # 403 SiteVerificationNotCompleted can happen right after a new key is published.
+  body = last_response.body.to_s
+  warn body unless body.empty?
+  break unless code == "403" && body.include?("SiteVerificationNotCompleted")
+  break if i == 4
+
+  delay = 20 * (i + 1)
+  warn "IndexNow has not verified the key yet; retrying in #{delay}s..."
+  sleep delay
+end
+
+abort "IndexNow failed: #{last_response.code} #{last_response.body}"
