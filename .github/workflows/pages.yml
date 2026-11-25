@@ -48,3 +48,8 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Notify IndexNow
+        continue-on-error: true
+        run: ruby script/indexnow
