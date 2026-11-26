@@ -357,6 +357,12 @@ h2 { font-size: 1.35rem; letter-spacing: -0.02em; line-height: 1.25; }
 
 .card h2 a:hover, .card h3 a:hover { text-decoration: underline; }
 
+.card-site {
+  margin: 0;
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
 .loc { margin: 0; font-weight: 600; }
 
 .basis, .lede { color: var(--muted); }

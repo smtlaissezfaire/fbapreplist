@@ -9,6 +9,9 @@
   {% if c.basis_short %}
     <p class="basis">{{ c.basis_short | escape }}</p>
   {% endif %}
+  {% if c.website %}
+    <p class="card-site">{% include business-link.html href=c.website text=c.website_label name=c.name slug=c.slug location="directory_card" rel="nofollow noopener" new_tab=true %}</p>
+  {% endif %}
   {% if c.services.size > 0 or c.tax_free %}
     <ul class="badges">
       {% for service in c.services %}

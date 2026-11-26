@@ -6,10 +6,13 @@ layout: default
   <div class="center-grid">
     <aside class="contact-card">
       <h2>Contact</h2>
+      {% assign outbound_name = page.center.name %}
+      {% assign outbound_slug = page.center.slug %}
+      {% assign outbound_location = "listing_page" %}
       {% if page.center.website %}
         <p class="contact-line">
           <span>Website</span>
-          <a href="{{ page.center.website | escape }}" rel="nofollow noopener" target="_blank">{{ page.center.website_label | escape }}</a>
+          {% include business-link.html href=page.center.website text=page.center.website_label name=outbound_name slug=outbound_slug location=outbound_location rel="nofollow noopener" new_tab=true %}
         </p>
       {% endif %}
       {% if page.center.phones.size > 0 %}
@@ -17,7 +20,7 @@ layout: default
           <span>Phone</span>
           {% for phone in page.center.phones %}
             {% if phone.href %}
-              <a href="{{ phone.href | escape }}">{{ phone.text | escape }}</a>
+              {% include business-link.html href=phone.href text=phone.text name=outbound_name slug=outbound_slug location=outbound_location %}
             {% else %}
               {{ phone.text | escape }}
             {% endif %}
@@ -29,12 +32,12 @@ layout: default
         <p class="contact-line">
           <span>Email</span>
           {% for email in page.center.emails %}
-            <a href="{{ email.href | escape }}">{{ email.text | escape }}</a>
+            {% include business-link.html href=email.href text=email.text name=outbound_name slug=outbound_slug location=outbound_location %}
             {% unless forloop.last %}<br>{% endunless %}
           {% endfor %}
         </p>
       {% endif %}
-      <p class="basis">Published by the center.{% if page.center.contact_source_url %} <a href="{{ page.center.contact_source_url | escape }}" rel="nofollow noopener" target="_blank">Contact source</a>.{% endif %}</p>
+      <p class="basis">Published by the center.{% if page.center.contact_source_url %} {% include business-link.html href=page.center.contact_source_url text="Contact source" name=outbound_name slug=outbound_slug location=outbound_location rel="nofollow noopener" new_tab=true %}.{% endif %}</p>
       <p><a href="{{ page.center.correction_url | escape }}">Report a correction</a></p>
     </aside>
 
@@ -46,7 +49,7 @@ layout: default
           <p class="basis">{{ page.center.basis_note | escape }}</p>
         {% endif %}
         {% if page.center.address_source_url %}
-          <p class="basis"><a href="{{ page.center.address_source_url | escape }}" rel="nofollow noopener" target="_blank">Location source</a></p>
+          <p class="basis">{% include business-link.html href=page.center.address_source_url text="Location source" name=outbound_name slug=outbound_slug location=outbound_location rel="nofollow noopener" new_tab=true %}</p>
         {% endif %}
       </header>
 
@@ -84,7 +87,7 @@ layout: default
               <footer>
                 {{ excerpt.label | escape }}
                 {% if excerpt.source_url %}
-                  · <a href="{{ excerpt.source_url | escape }}" rel="nofollow noopener" target="_blank">Source</a>
+                  · {% include business-link.html href=excerpt.source_url text="Source" name=outbound_name slug=outbound_slug location=outbound_location rel="nofollow noopener" new_tab=true %}
                 {% endif %}
               </footer>
             </blockquote>
@@ -109,7 +112,7 @@ layout: default
           <summary>Sources for this listing</summary>
           <ul>
             {% for source in page.center.sources %}
-              <li><a href="{{ source.url | escape }}" rel="nofollow noopener" target="_blank">{{ source.label | escape }}</a></li>
+              <li>{% include business-link.html href=source.url text=source.label name=outbound_name slug=outbound_slug location=outbound_location rel="nofollow noopener" new_tab=true %}</li>
             {% endfor %}
           </ul>
         </details>
