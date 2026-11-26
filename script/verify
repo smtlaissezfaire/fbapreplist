@@ -175,6 +175,10 @@ end
 fail "favicon missing" unless SITE.join("favicon.svg").file?
 fail "stylesheet missing" unless SITE.join("assets/css/site.css").file?
 fail "search script missing" unless SITE.join("assets/js/site.js").file?
+if SITE.join("assets/js/site.js").file?
+  script = read(SITE.join("assets/js/site.js"))
+  fail "Outbound click tracking missing from site.js" unless script.include?("analytics.capture(\"outbound_click\"") && script.include?("analytics.flush") && script.include?('window.gtag("event", "outbound_click"') && script.include?('transport_type: "beacon"')
+end
 fail "Open Graph image missing" unless SITE.join("assets/og.png").file?
 
 index_path = SITE.join("search-index.json")
@@ -233,6 +237,8 @@ pages.each do |file|
   raw_desc = body[/<meta name="description" content="([^"]*)"/, 1]
   description = CGI.unescapeHTML(raw_desc.to_s).strip
   fail "Empty meta description in #{relative}" if description.empty?
+  fail "Missing Google Analytics in #{relative}" unless body.include?("https://www.googletagmanager.com/gtag/js?id=G-HBTBV9FZM5") && body.include?("gtag('config','G-HBTBV9FZM5')")
+  fail "Missing self-hosted analytics in #{relative}" unless body.include?("https://analytics.smtlaissezfaire.com/js/analytics.js") && body.include?('analytics.init("pk_K5aVo1fvwYsgCgbb81NKHaAN"')
   (descriptions[description] ||= []) << relative
 
   fail "Missing canonical in #{relative}" unless body.include?('rel="canonical"')
@@ -340,6 +346,23 @@ end
 
 home = read(SITE.join("index.html"))
 fail "Home is missing the center list" unless home.scan('class="card"').size == EXPECTED_CENTERS
+fail "Home cards missing outbound business links" unless home.scan('data-link-location="directory_card"').size == EXPECTED_CENTERS
+fail "Home card website links missing nofollow or new tab" if home.scan(/<a\b[^>]*data-link-location="directory_card"[^>]*>/m).any? { |tag| !tag.include?("nofollow") || !tag.include?("noopener") || !tag.include?('target="_blank"') }
+
+state_sample = state_pages.find(&:file?)
+fail "State page missing directory card business links" if state_sample && !read(state_sample).include?('data-link-location="directory_card"')
+service_sample = service_pages.find(&:file?)
+fail "Service page missing directory card business links" if service_sample && !read(service_sample).include?('data-link-location="directory_card"')
+
+center_with_site = center_pages.find { |file| read(file).include?('data-link-location="listing_page"') }
+fail "No prep center page tags outbound business links" unless center_with_site
+if center_with_site
+  center_body = read(center_with_site)
+  fail "Prep center website link missing business attributes in #{rel(center_with_site)}" unless center_body.match?(/<a\b[^>]*data-business-slug="[^"]+"[^>]*data-link-location="listing_page"/m) || center_body.match?(/<a\b[^>]*data-link-location="listing_page"[^>]*data-business-slug="[^"]+"/m)
+end
+
+privacy = SITE.join("privacy/index.html")
+fail "Privacy page missing analytics disclosure" unless privacy.file? && read(privacy).include?("Google Analytics") && read(privacy).include?("self-hosted analytics")
 
 other_pages = pages.reject do |file|
   relative = rel(file)

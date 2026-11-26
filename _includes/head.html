@@ -22,6 +22,12 @@
 {% if page.noindex %}
 <meta name="robots" content="noindex">
 {% endif %}
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HBTBV9FZM5"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-HBTBV9FZM5');</script>
+<script>
+!function(w,d,s){var a=w.analytics=w.analytics||[];if(a.__loaded||a._s)return;a._s=1;a._q=a._q||[];["init","capture","identify","reset","flush"].forEach(function(m){a[m]=a[m]||function(){a._q.push([m].concat([].slice.call(arguments)))}});var e=d.createElement("script");e.async=1;e.src=s;(d.head||d.documentElement).appendChild(e)}(window,document,"https://analytics.smtlaissezfaire.com/js/analytics.js");
+analytics.init("pk_K5aVo1fvwYsgCgbb81NKHaAN",{host:"https://ingest.analytics.smtlaissezfaire.com"});
+</script>
 {% if page.json_ld %}
 <script type="application/ld+json">{{ page.json_ld }}</script>
 {% elsif page.crumbs %}

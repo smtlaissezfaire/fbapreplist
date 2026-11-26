@@ -1,0 +1,6 @@
+<a href="{{ include.href | escape }}"
+  {%- if include.new_tab %} target="_blank"{% endif %}
+  {%- if include.rel %} rel="{{ include.rel | escape }}"{% endif %}
+   data-business-name="{{ include.name | escape }}"
+   data-business-slug="{{ include.slug | escape }}"
+   data-link-location="{{ include.location | escape }}">{{ include.text | escape }}</a>

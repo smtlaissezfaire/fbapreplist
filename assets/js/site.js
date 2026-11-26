@@ -129,4 +129,48 @@
       if (messageField && !messageField.value) messageField.value = "Correction for " + center + ": ";
     }
   }
+
+  document.addEventListener("click", function (event) {
+    var node = event.target;
+    if (!node) return;
+    if (node.nodeType !== 1) node = node.parentElement;
+    if (!node || !node.closest) return;
+    var link = node.closest("a");
+    if (!link || !link.href) return;
+
+    var slug = link.getAttribute("data-business-slug");
+    var raw = link.getAttribute("href") || "";
+    var externalHttp = /^https?:\/\//i.test(raw);
+    if (externalHttp) {
+      try {
+        var url = new URL(link.href, window.location.href);
+        if (url.hostname === window.location.hostname) externalHttp = false;
+      } catch (err) {
+        externalHttp = true;
+      }
+    }
+    if (!slug && !externalHttp) return;
+
+    var name = link.getAttribute("data-business-name") || "";
+    var location = link.getAttribute("data-link-location") || "";
+    var analytics = window.analytics;
+    if (analytics && typeof analytics.capture === "function") {
+      analytics.capture("outbound_click", {
+        business_name: name,
+        business_slug: slug || "",
+        destination_url: link.href,
+        link_location: location
+      });
+      if (typeof analytics.flush === "function") analytics.flush();
+    }
+    if (typeof window.gtag === "function") {
+      window.gtag("event", "outbound_click", {
+        business_name: name,
+        business_slug: slug || "",
+        link_url: link.href,
+        link_location: location,
+        transport_type: "beacon"
+      });
+    }
+  });
 })();
